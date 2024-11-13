@@ -8,6 +8,10 @@ export default function Inventory({ onBackToMenu }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
+    const [showAlertModal, setShowAlertModal] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -27,6 +31,27 @@ export default function Inventory({ onBackToMenu }) {
     }, []);
 
     const addProduct = async () => {
+        if (!newProduct.name.trim()) {
+            setAlertMessage('Por favor, ingrese el nombre del producto');
+            setShowAlertModal(true);
+            return;
+        }
+        if (!newProduct.quantity || newProduct.quantity <= 0) {
+            setAlertMessage('Por favor, ingrese una cantidad válida');
+            setShowAlertModal(true);
+            return;
+        }
+        if (!newProduct.unit.trim()) {
+            setAlertMessage('Por favor, ingrese la unidad de medida');
+            setShowAlertModal(true);
+            return;
+        }
+        if (!newProduct.alertLevel || newProduct.alertLevel <= 0) {
+            setAlertMessage('Por favor, ingrese un nivel de alerta válido');
+            setShowAlertModal(true);
+            return;
+        }
+
         try {
             const response = await fetch('http://localhost:3001/api/products', {
                 method: 'POST',
@@ -45,6 +70,8 @@ export default function Inventory({ onBackToMenu }) {
             setNewProduct({ name: '', quantity: 0, unit: '', alertLevel: 0 });
         } catch (error) {
             console.error('Error:', error);
+            setAlertMessage('Error al agregar el producto');
+            setShowAlertModal(true);
         }
     };
 
@@ -53,19 +80,28 @@ export default function Inventory({ onBackToMenu }) {
         setNewProduct({ ...newProduct, [name]: value });
     };
 
-    const deleteProduct = async (id) => {
-        try {
-            const response = await fetch(`http://localhost:3001/api/products/${id}`, {
-                method: 'DELETE'
-            });
+    const handleDeleteClick = (product) => {
+        setProductToDelete(product);
+        setShowDeleteModal(true);
+    };
 
-            if (!response.ok) {
-                throw new Error('Error al eliminar el producto');
+    const confirmDelete = async () => {
+        if (productToDelete) {
+            try {
+                const response = await fetch(`http://localhost:3001/api/products/${productToDelete.id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al eliminar el producto');
+                }
+
+                setProducts(products.filter(product => product.id !== productToDelete.id));
+                setShowDeleteModal(false);
+                setProductToDelete(null);
+            } catch (error) {
+                console.error('Error:', error);
             }
-
-            setProducts(products.filter(product => product.id !== id));
-        } catch (error) {
-            console.error('Error:', error);
         }
     };
 
@@ -77,6 +113,12 @@ export default function Inventory({ onBackToMenu }) {
 
     return (
         <div className="flex flex-col w-full p-8 bg-[#2C2F33] rounded-2xl shadow-xl">
+            <button
+                onClick={onBackToMenu}
+                className="mt-4 px-4 py-2 bg-[#4F46E5] text-[#ffffff] rounded-lg hover:bg-[#3B3F45]"
+            >
+                Volver al Menú
+            </button>
             <h2 className="text-2xl font-bold text-[#ffffff] mb-4">Gestión de Inventario</h2>
             <p className="text-sm font-light text-[#6B7280] mb-4">Aquí puedes gestionar los productos en inventario.</p>
 
@@ -133,7 +175,12 @@ export default function Inventory({ onBackToMenu }) {
                         <p className="text-[#E5E7EB]">Cantidad: {product.quantity} {product.unit}</p>
                         <p className="text-[#E5E7EB]">Nivel de Alerta: {product.alertLevel}</p>
                         <div className="flex justify-end mt-2">
-                            <button onClick={() => deleteProduct(product.id)} className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-700">Eliminar</button>
+                            <button 
+                                onClick={() => handleDeleteClick(product)} 
+                                className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-700"
+                            >
+                                Eliminar
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -151,12 +198,49 @@ export default function Inventory({ onBackToMenu }) {
                 ))}
             </div>
 
-            <button
-                onClick={onBackToMenu}
-                className="mt-4 px-4 py-2 bg-[#4F46E5] text-[#ffffff] rounded-lg hover:bg-[#3B3F45]"
-            >
-                Volver al Menú
-            </button>
+            {showAlertModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-[#2C2F33] p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+                        <h3 className="text-lg font-bold text-[#ffffff] mb-4">Alerta</h3>
+                        <p className="text-[#E5E7EB] mb-4">
+                            {alertMessage}
+                        </p>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowAlertModal(false)}
+                                className="px-4 py-2 bg-[#4F46E5] text-white rounded hover:bg-[#3B3F45]"
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-[#2C2F33] p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+                        <h3 className="text-lg font-bold text-[#ffffff] mb-4">Confirmar Eliminación</h3>
+                        <p className="text-[#E5E7EB] mb-4">
+                            ¿Está seguro que desea eliminar el producto "{productToDelete?.name}"?
+                        </p>
+                        <div className="flex justify-end gap-4">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 } 

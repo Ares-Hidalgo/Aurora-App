@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS Users (
     email VARCHAR(255) UNIQUE NOT NULL,
     document VARCHAR(255),
     rol ENUM('client', 'admin') DEFAULT 'client',
-    password VARCHAR(255) NOT NULL
+    pass VARCHAR(255) NOT NULL
 );
 
 -- Tabla Menu

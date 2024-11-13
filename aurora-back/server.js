@@ -193,11 +193,19 @@ app.delete('/api/products/:id', (req, res) => {
 // Ruta para obtener las ventas
 app.get('/api/sales', (req, res) => {
     const query = `
-        SELECT Menu.name, SUM(OrderItems.quantity) AS totalSold
-        FROM OrderItems
-        JOIN Menu ON OrderItems.menuItemId = Menu.id
-        GROUP BY Menu.name
+        SELECT 
+            m.name,
+            m.price,
+            SUM(oi.quantity) as totalSold,
+            SUM(oi.quantity * m.price) as totalRevenue
+        FROM Sales s
+        JOIN Orders o ON s.orderId = o.id
+        JOIN OrderItems oi ON o.id = oi.orderId
+        JOIN Menu m ON oi.menuItemId = m.id
+        GROUP BY m.id, m.name, m.price
+        ORDER BY totalRevenue DESC
     `;
+    
     db.query(query, (err, results) => {
         if (err) {
             console.error('Error al obtener las ventas:', err);
@@ -251,6 +259,50 @@ app.delete('/api/menu/:id', (req, res) => {
             return res.status(500).json({ error: 'Error al eliminar el producto del menú' });
         }
         res.json({ message: 'Producto del menú eliminado' });
+    });
+});
+
+// Agregar este nuevo endpoint para actualizar el estado de una orden
+app.put('/api/orders/:id/status', (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Primero actualizamos el estado de la orden
+    const updateOrderQuery = `
+        UPDATE Orders 
+        SET status = ?
+        WHERE id = ?
+    `;
+
+    db.query(updateOrderQuery, [status, id], (err, result) => {
+        if (err) {
+            console.error('Error al actualizar el estado del pedido:', err);
+            return res.status(500).json({ error: 'Error al actualizar el estado del pedido' });
+        }
+
+        // Si el estado es 'completed', registramos la venta
+        if (status === 'completed') {
+            const insertSaleQuery = `
+                INSERT INTO Sales (orderId, customerName, total, paymentMethod)
+                SELECT 
+                    id,
+                    customerName,
+                    total,
+                    paymentMethod
+                FROM Orders
+                WHERE id = ?
+            `;
+
+            db.query(insertSaleQuery, [id], (err, saleResult) => {
+                if (err) {
+                    console.error('Error al registrar la venta:', err);
+                    return res.status(500).json({ error: 'Error al registrar la venta' });
+                }
+                res.json({ message: 'Pedido completado y venta registrada' });
+            });
+        } else {
+            res.json({ message: 'Estado del pedido actualizado' });
+        }
     });
 });
 

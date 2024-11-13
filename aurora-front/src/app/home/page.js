@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBox, faClipboardList, faChartLine, faFileAlt, faUsers, faUtensils } from '@fortawesome/free-solid-svg-icons';
 import Inventory from '../inventory/Inventory';
 import Orders from '../orders/Orders';
-import Sales from '../sales/Sales';
+import Sales from '../sales/page';
 import Reports from '../reports/Reports';
 import Employees from '../employees/Employees';
 import Menu from '../menu/Menu';
@@ -87,7 +87,7 @@ export default function Home() {
 
     return (
         <div className="flex flex-col w-full md:w-3/4 xl:w-2/3 mx-auto mt-6 p-8 bg-[#2C2F33] rounded-2xl shadow-xl">
-            <h1 className="text-3xl font-bold text-[#ffffff] mb-6">Bienvenido a AURORA, {username}</h1>
+            <h1 className="text-3xl font-bold text-[#ffffff] mb-6">Bienvenido a AURORA - {username}</h1>
             <p className="text-sm font-light text-[#6B7280] mb-8">Has iniciado sesión exitosamente.</p>
             {renderView()}
         </div>
